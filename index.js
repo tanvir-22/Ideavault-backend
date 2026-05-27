@@ -137,6 +137,31 @@ async function run() {
       );
       res.send(result);
     });
+
+    //delete a comment
+    app.patch("/comment/:id/delete", async (req, res) => {
+      const { id } = req.params;
+      const { commentId } = req.body;
+      const result = await posts.updateOne(
+        { _id: new ObjectId(id) },
+        { $pull: { comments: { commentId } } },
+      );
+      res.send(result);
+    });
+
+    app.patch("/comment/:id/edit", async (req, res) => {
+      const { id } = req.params;
+      const { commentId, text } = req.body;
+      const result = await posts.updateOne(
+        { _id: new ObjectId(id), "comments.commentId": commentId },
+        {
+          $set: {
+            "comments.$.text": text,
+          },
+        },
+      );
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
