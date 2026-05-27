@@ -20,10 +20,10 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!",
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!",
+    // );
 
     const database = client.db("Ideavault");
     const posts = database.collection("posts");
@@ -114,6 +114,26 @@ async function run() {
         alreadyLiked
           ? { $pull: { likes: userId } }
           : { $push: { likes: userId } },
+      );
+      res.send(result);
+    });
+
+    app.patch("/comment/:id", async (req, res) => {
+      const { id } = req.params;
+      const { userId, text, author } = req.body;
+      const result = await posts.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $push: {
+            comments: {
+              commentId: new ObjectId().toString(), //creates id for each new comment
+              userId,
+              author,
+              text,
+              createdAt: new Date(),
+            },
+          },
+        },
       );
       res.send(result);
     });
