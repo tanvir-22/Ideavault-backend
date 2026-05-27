@@ -92,6 +92,31 @@ async function run() {
       res.send(result);
       console.log("idea updated successfully");
     });
+
+    //delete a post
+    app.delete("/deletepost/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const result = await posts.deleteOne(query);
+      res.send(result);
+      console.log("deleted the post");
+    });
+
+    //like a post
+
+    app.patch("/like/:id", async (req, res) => {
+      const { id } = req.params; //idea post id
+      const { userId } = req.body;
+      const idea = await posts.findOne({ _id: new ObjectId(id) });
+      const alreadyLiked = idea.likes.includes(userId);
+      const result = await posts.updateOne(
+        { _id: new ObjectId(id) },
+        alreadyLiked
+          ? { $pull: { likes: userId } }
+          : { $push: { likes: userId } },
+      );
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
