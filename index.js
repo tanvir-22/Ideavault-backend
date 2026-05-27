@@ -53,17 +53,44 @@ async function run() {
     //create a post
     app.post("/createpost", async (req, res) => {
       const postData = req.body;
-      if(typeof postData.tags ==='string'){
-        postData.tags = postData.tags.split(',').map(t=>t.trim())
+      postData.author = new ObjectId(postData.author);
+      if (typeof postData.tags === "string") {
+        postData.tags = postData.tags.split(",").map((t) => t.trim());
       }
-      if(typeof postData.estimatedBudget!= 'Number'){
-        postData.estimatedBudget = Number(postData.estimatedBudget)
+      if (typeof postData.estimatedBudget != "Number") {
+        postData.estimatedBudget = Number(postData.estimatedBudget);
       }
       postData.createdAt = new Date();
       postData.updatedAt = new Date();
       const result = await posts.insertOne(postData);
       res.send(result);
       console.log("new idea inserted to collection");
+    });
+
+    //find usershared posts only
+
+    app.get("/userideas/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { author: new ObjectId(id) };
+      const result = await posts.find(query).toArray();
+      res.send(result);
+    });
+
+    //update a post
+    app.patch("/update/:id", async (req, res) => {
+      const updatedData = req.body;
+      const { id } = req.params;
+      updatedData.updatedAt = new Date();
+      if (typeof updatedData.tags === "string") {
+        updatedData.tags = updatedData.tags.split(",").map((t) => t.trim());
+      }
+      if (typeof updatedData.estimatedBudget != "Number") {
+        updatedData.estimatedBudget = Number(updatedData.estimatedBudget);
+      }
+      const query = { _id: new ObjectId(id) };
+      const result = await posts.updateOne(query, { $set: updatedData });
+      res.send(result);
+      console.log("idea updated successfully");
     });
   } finally {
     // Ensures that the client will close when you finish/error
