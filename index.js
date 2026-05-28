@@ -162,6 +162,27 @@ async function run() {
       );
       res.send(result);
     });
+
+    //find user interactions(likes and comments)
+    app.get("/mycomment/:userId", async (req, res) => {
+      const { userId } = req.params;
+      const result = await posts
+        .find({
+          "comments.userId": userId,
+        })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/mylikes/:userId", async (req, res) => {
+      const { userId } = req.params;
+      const result = await posts
+        .find({
+          likes: userId,
+        })
+        .toArray();
+      res.send(result);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
