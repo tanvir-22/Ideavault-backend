@@ -2,6 +2,7 @@ const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const cors = require("cors");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 require("dotenv").config();
 app.use(express.json());
 app.use(cors());
@@ -9,12 +10,37 @@ const port = process.env.PORT;
 const uri = process.env.URI;
 
 const client = new MongoClient(uri, {
+  maxPoolSize: 20,
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
   },
 });
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ message: "unauthorized" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: "unauthorized" });
+  }
+  try {
+    const JWKS = createRemoteJWKSet(
+      new URL(`${process.env.BASE_URL}/api/auth/jwks`),
+    );
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `${process.env.BASE_URL}`,
+      audience: `${process.env.BASE_URL}`,
+    });
+    next();
+  } catch (error) {
+    console.error("Token validation failed:", error);
+    res.status(403).json({ message: "forbidden" });
+  }
+};
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -36,14 +62,14 @@ async function run() {
     });
 
     //retrieve a single post
-    app.get("/ideas/:id", async (req, res) => {
+    app.get("/ideas/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const query = { _id: new ObjectId(id) };
       const requiredDocument = await posts.findOne(query);
       res.send(requiredDocument);
     });
 
-    app.get("/users/:id", async (req, res) => {
+    app.get("/users/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const query = { _id: new ObjectId(id) };
       const user = await users.findOne(query);
@@ -51,7 +77,7 @@ async function run() {
     });
 
     //create a post
-    app.post("/createpost", async (req, res) => {
+    app.post("/createpost", verifyToken, async (req, res) => {
       const postData = req.body;
       postData.author = new ObjectId(postData.author);
       if (typeof postData.tags === "string") {
@@ -69,7 +95,7 @@ async function run() {
 
     //find usershared posts only
 
-    app.get("/userideas/:id", async (req, res) => {
+    app.get("/userideas/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const query = { author: new ObjectId(id) };
       const result = await posts.find(query).toArray();
@@ -77,7 +103,7 @@ async function run() {
     });
 
     //update a post
-    app.patch("/update/:id", async (req, res) => {
+    app.patch("/update/:id", verifyToken, async (req, res) => {
       const updatedData = req.body;
       const { id } = req.params;
       updatedData.updatedAt = new Date();
@@ -120,7 +146,7 @@ async function run() {
 
     app.patch("/comment/:id", async (req, res) => {
       const { id } = req.params;
-      const { userId, text, author } = req.body;
+      const { userId, text, author, authorImage } = req.body;
       const result = await posts.updateOne(
         { _id: new ObjectId(id) },
         {
@@ -130,6 +156,7 @@ async function run() {
               userId,
               author,
               text,
+              authorImage,
               createdAt: new Date(),
             },
           },
