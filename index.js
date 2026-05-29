@@ -10,7 +10,7 @@ const port = process.env.PORT;
 const uri = process.env.URI;
 
 const client = new MongoClient(uri, {
-  maxPoolSize: 20,
+  maxPoolSize: 30,
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
